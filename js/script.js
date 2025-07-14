@@ -1,6 +1,17 @@
 // ^ Building simple router
 const global = {
     currentPage: window.location.pathname,
+    search: {
+        term: '',
+        type: '',
+        page: 1,
+        totalPages: 1,
+        totalResults: 0
+    },
+    api: {
+        apiKey: '',
+        apiUrl: 'https://api.themoviedb.org/3/'
+    }
 }
 // console.log(global.currentPage); -> To check the page where we are home,move,tvshows or other page
 
@@ -223,14 +234,188 @@ function displayBackgroundImage(type, backgroundPath){
     }
 }
 
+// ^ Search Movies/Shows
+async function search(){
+    // QueryString is this `?type=movie&search-term=goodfellas` in url when you send input msg
+    const queryString = window.location.search;
+    const URLParams = new URLSearchParams(queryString); 
+    // console.log(URLParams); // We not see any data but we have to use methods to see 
+    // console.log(URLParams.get('type')); // Basically we can put this in variable but we have to use in others page also so we will put in global state.
+
+    global.search.type = URLParams.get('type');  // type = movie or tv
+    global.search.term = URLParams.get('search-term'); // search-term is name in my input 
+
+    if(global.search.term !== '' && global.search.term !== null){
+        //@todo - make request and display results
+        const { results, total_pages, page, total_results } = await searchAPIData();
+        
+        global.search.page = page;
+        global.search.totalPages = total_pages;
+        global.search.totalResults = total_results;
+
+        if(results.length === 0 ){
+            showAlert('No results found');
+            return;
+        }
+        
+        displaySearchResults(results);
+
+        document.querySelector('#search-term').value = '';
+
+    }else{
+        // alert('Please enter a search term'); // lets do custom alert
+        showAlert('Please enter a search term');
+    }
+}
+
+// ^ After Search display cards and movies
+function displaySearchResults(results){
+    // Clear previous results
+    document.querySelector('#search-results').innerHTML = '';
+    document.querySelector('#search-results-heading').innerHTML = '';
+    document.querySelector('#pagination').innerHTML = '';
+
+
+    results.forEach((result) => {
+        const div = document.createElement('div');
+        div.classList.add('card');
+        div.innerHTML = `
+            <a href = "${global.search.type}-details.html?id=${result.id}">
+                ${
+                result.poster_path
+                        ? `<img
+                        src = "https://image.tmdb.org/t/p/w500/${result.poster_path}"
+                        class = "card-img-top"
+                        alt = "${global.search.type === 'movie' ? result.title : result.name}" 
+                        />`
+                            : `<img
+                        src = "../images/no-image.jpg"
+                        class = "card-img-top"
+                        alt = "${global.search.type === 'movie' ? result.title : result.name}" 
+                       />`
+                }
+            </a>
+            <div class = "card-body">
+                <h5 class = "card-title">${global.search.type === 'movie' ? result.title : result.name}</h5>
+                <p class = "card-text">
+                    <small class = "text-muted">Release: ${global.search.type === 'movie' ? result.release_date : result.first_air_date}</small>
+                </p>
+            </div>
+        `;
+
+        document.querySelector('#search-results-heading').innerHTML = `
+            <h2>${results.length} of ${global.search.totalResults} Results for ${global.search.term}</h2>
+        `;
+        
+        document.querySelector('#search-results').appendChild(div);
+    });
+
+    displayPagination();
+}
+
+// & Create and Display Pagination For Search
+function displayPagination(){
+    const div = document.createElement('div');
+    div.classList.add('pagination');
+    div.innerHTML = `
+        <button class="btn btn-primary" id="prev">Prev</button>
+        <button class="btn btn-primary" id="next">Next</button>
+        <div class="page-counter">Page ${global.search.page} of ${global.search.totalPages}</div>
+    `;
+
+    document.querySelector('#pagination').appendChild(div);
+
+    // Disable prev button if on first page
+    if(global.search.page === 1){
+        document.querySelector('#prev').disabled = true;
+    }
+
+    // Disable next button if on last page
+    if(global.search.page === global.search.totalPages){
+        document.querySelector('#next').disabled = true;
+    }
+
+    // ! Now we want to add an eventListener so that we can actually change the page [to change the page we need send another request to the API with particular page or else we will get same results on next page]
+    // Next Page
+    document.querySelector('#next').addEventListener('click', async () => {
+        global.search.page++;
+        const { results, total_pages } = await searchAPIData();
+        displaySearchResults(results);
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth' // makes it smooth scroll
+        });
+    });
+
+    // Prev Page
+    document.querySelector('#prev').addEventListener('click', async () => {
+        global.search.page--;
+        const { results, totalPages } = await searchAPIData();
+        displaySearchResults(results); 
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth' // makes it smooth scroll
+        });
+    })
+}
+
+//^ Display Slider Movies
+async function displaySlider(){
+    const { results } = await fetchAPIData('movie/now_playing');
+
+    results.forEach((movie) =>{
+        const div = document.createElement('div');
+        div.classList.add('swiper-slide');
+
+        div.innerHTML = `
+            <a href="movie-details.html?id=${movie.id}">
+                <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="Movie Title" />
+            </a>
+            <h4 class="swiper-rating">
+                <i class="fas fa-star text-secondary"></i> ${movie.vote_average} / 10
+            </h4>
+        `;
+
+        document.querySelector('.swiper-wrapper').appendChild(div);
+
+    });
+    initSwiper();
+}
+
+function initSwiper(){
+    // https://swiperjs.com/swiper-api
+    const swiper = new Swiper('.swiper',{
+        slidesPerView : 1,
+        spaceBetween: 30,
+        freeMode: true,
+        loop: true,
+        autoplay: {
+            delay: 4000,
+            disableOnInteraction: false
+        },
+        breakpoints: {
+            500:{
+                slidesPerView: 2
+            },
+            700:{
+                slidesPerView: 3
+            },
+            1200:{
+                slidesPerView: 4
+            },
+        },
+    });
+}
+
+
 // ^ Fetch data from TMDB API
 async function fetchAPIData(endpoint){
     /*
      * Register your ke at https://www.themoviedb.org/settings/api and enter here
      * Only use this for developement or very small projects. You should store your key and make requests from a server. 
     */
-    const API_KEY = ''; // * Production application you shouldn't provide the API_KEY it should not be in public
-    const API_URL = 'https://api.themoviedb.org/3/';
+    const API_KEY = global.api.apiKey; // * Production application you shouldn't provide the API_KEY it should not be in public
+    const API_URL = global.api.apiUrl;
 
     showSpinner();  // Right before we make a request
 
@@ -242,6 +427,25 @@ async function fetchAPIData(endpoint){
 
     return data;
 }
+
+
+// * Make Request To Search 
+async function searchAPIData(){
+    const API_KEY = global.api.apiKey;
+    const API_URL = global.api.apiUrl;
+
+    showSpinner();
+    
+    const response = await fetch(`${API_URL}search/${global.search.type}?api_key=${API_KEY}&language=en-US&query=${global.search.term}&page=${global.search.page}`);
+
+    const data = await response.json();
+
+    hideSpinner();
+
+    return data;
+}
+
+
 
 // It show spinner 
 function showSpinner(){
@@ -262,6 +466,18 @@ function highlightActiveLink(){
     });
 }
 
+
+//^ Show Alert [custom]
+function showAlert(message, className = 'error'){
+    const alertEl = document.createElement('div');
+    alertEl.classList.add('alert',className);
+    alertEl.appendChild(document.createTextNode(message));
+    document.querySelector('#alert').appendChild(alertEl);
+
+    setTimeout(() => alertEl.remove(), 3000);
+}
+
+
 function addCommasToNumber(number){
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');
 }
@@ -271,6 +487,7 @@ function init(){
     switch(global.currentPage){
         case '/':
         case '/index.html':
+            displaySlider();
             displayPopularMovies();
             // console.log('Home');
             break;
@@ -287,7 +504,8 @@ function init(){
             // console.log('TV Details');
             break;
         case '/search.html':
-            console.log('Search');
+            search();
+            // console.log('Search');
             break;
     }
 
