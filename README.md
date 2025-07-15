@@ -12,7 +12,7 @@ Features include:
 
 ## 📸 Screenshot
 
-![Flixx Screenshot](./screenshot.png)
+![Flixx Screenshot](./images/screenshot.png)
 
 ---
 
