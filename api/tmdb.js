@@ -2,9 +2,26 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
+const API_KEY_ENV_NAMES = [
+  "TMDB_KEY",
+  "TMDB_API_KEY",
+  "VITE_TMDB_KEY",
+  "NEXT_PUBLIC_TMDB_KEY",
+];
+
+function getTmdbApiKey() {
+  for (const envName of API_KEY_ENV_NAMES) {
+    const value = process.env[envName];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return "";
+}
 
 function loadLocalEnv() {
-  if (process.env.TMDB_KEY) {
+  if (getTmdbApiKey()) {
     return;
   }
 
@@ -14,7 +31,7 @@ function loadLocalEnv() {
     return;
   }
 
-  const envFile = fs.readFileSync(envPath, "utf8");
+  const envFile = fs.readFileSync(envPath, "utf8").replace(/^\uFEFF/, "");
 
   envFile.split(/\r?\n/).forEach((line) => {
     const trimmedLine = line.trim();
@@ -29,13 +46,13 @@ function loadLocalEnv() {
       return;
     }
 
-    const key = trimmedLine.slice(0, separatorIndex).trim();
+    const key = trimmedLine.slice(0, separatorIndex).trim().replace(/^\uFEFF/, "");
     const value = trimmedLine
       .slice(separatorIndex + 1)
       .trim()
       .replace(/^['\"]|['\"]$/g, "");
 
-    if (key && !process.env[key]) {
+    if (key && value && !process.env[key]) {
       process.env[key] = value;
     }
   });
@@ -51,10 +68,12 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const apiKey = process.env.TMDB_KEY;
+  const apiKey = getTmdbApiKey();
 
   if (!apiKey) {
-    res.status(500).json({ error: "TMDB_KEY is not configured." });
+    res.status(500).json({
+      error: "TMDB API key is not configured. Set TMDB_KEY in .env.",
+    });
     return;
   }
 
