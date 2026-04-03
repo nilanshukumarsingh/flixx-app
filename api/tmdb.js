@@ -46,7 +46,10 @@ function loadLocalEnv() {
       return;
     }
 
-    const key = trimmedLine.slice(0, separatorIndex).trim().replace(/^\uFEFF/, "");
+    const key = trimmedLine
+      .slice(0, separatorIndex)
+      .trim()
+      .replace(/^\uFEFF/, "");
     const value = trimmedLine
       .slice(separatorIndex + 1)
       .trim()
