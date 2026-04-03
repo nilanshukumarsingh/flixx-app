@@ -3,6 +3,7 @@
 Flixx is a modern movie and TV show information app built with vanilla JavaScript. It uses [The Movie Database (TMDB) API v3](https://www.themoviedb.org/settings/api) to fetch and display data.
 
 Features include:
+
 - Browse popular movies and TV shows
 - View detailed information pages
 - Search movies and shows with pagination
@@ -32,13 +33,17 @@ git clone https://github.com/nilanshukumarsingh/flixx-app.git
 cd flixx-app
 ```
 
-3. Install Dependencies
-> This project uses only vanilla JavaScript, so there are no dependencies to install.
-Just open the index.html file in your browser or use a local server.
+3. Start the local server
+
+```bash
+node server.js
+```
+
+Then open `http://localhost:3000` in your browser.
 
 ## 🔑 Get an API Key from TMDB
 
-To use this project, you'll need an API key from [The Movie Database (TMDB)](https://www.themoviedb.org/).
+To use this project securely, you'll need an API key from [The Movie Database (TMDB)](https://www.themoviedb.org/).
 
 ### Steps:
 
@@ -48,24 +53,16 @@ To use this project, you'll need an API key from [The Movie Database (TMDB)](htt
 
 ### Add Your API Key to the Project
 
-1. In the project directory, open the file: `js/global.js`.
-2. Replace the `apiKey` value with your API key:
+1. Create a `.env` file from `.env.example`.
+2. Set `TMDB_KEY` to your TMDB API key.
+3. Deploy the app to Vercel so the API route in [api/tmdb.js](api/tmdb.js) can use the environment variable server-side.
 
-```javascript
-const global = {
-  currentPage: window.location.pathname,
-  search: {
-    term: '',
-    type: '',
-    page: 1,
-    totalPages: 1
-  },
-  api: {
-    apiKey: 'YOUR_API_KEY_HERE',
-    apiUrl: 'https://api.themoviedb.org/3/'
-  }
-};
+```env
+TMDB_KEY=your_real_api_key
 ```
+
+The browser now talks only to the local proxy endpoint, and the TMDB key stays on the server. Do not put the key back into frontend files.
+
 ## 🧰 Development Tools Used
 
 - **HTML5**
